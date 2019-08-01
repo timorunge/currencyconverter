@@ -1,0 +1,42 @@
+builds:
+  -
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - 386
+      - amd64
+      - arm
+      - arm64
+    ignore:
+      - goos: darwin
+        goarch: 386
+    ldflags:
+      - "-s -w -X main.buildDate={{ .Date }} -X main.gitCommit={{ .FullCommit }} -X main.version={{ .Version }}"
+    main: ./cmd/currencyconverter/currencyconverter.go
+
+archives:
+  -
+    name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}-{{ .Arch }}"
+    files:
+      - LICENSE
+    wrap_in_directory: true
+
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Tag }}_CHECKSUMS"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - Merge branch
+    - Merge pull request
+
+release:
+  github:
+    owner: timorunge
+    name: currencyconverter
+  draft: true
