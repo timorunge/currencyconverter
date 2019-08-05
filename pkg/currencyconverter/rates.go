@@ -4,15 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"regexp"
 	"sort"
-)
-
-// DateFormat is the format of the date.
-// DateFormatRegex is the regex for the date format.
-const (
-	DateFormat      = "latest|YYYY-MM-DD"
-	DateFormatRegex = "^latest|(1999|20[0-9]{2})-(0?[1-9]|1[012])-(0?[1-9]|[12][0-9]|3[01])$"
 )
 
 // baseRate is the base rate for all calculations.
@@ -40,14 +32,15 @@ type Rate struct {
 	Rate     float64 `xml:"rate,attr"`
 }
 
-// IsValidDate is checking if the date is in the right format.
-func IsValidDate(date string) error {
-	return isValidDate(date)
+// NewExchangeRates is returning a new exchange rate struct.
+func NewExchangeRates() *ExchangeRates {
+	return &ExchangeRates{}
 }
 
-// IsValidDate is checking if the date is in the right format.
-func (d *Date) IsValidDate() error {
-	return d.isValidDate()
+// AddRate is adding a rate struct to a date.
+func (d *Date) AddRate(rate Rate) *Date {
+	d.Rates = append(d.Rates, rate)
+	return d
 }
 
 // GetRate is returning one exchange rate for a currency in a date context.
@@ -56,6 +49,17 @@ func (d *Date) GetRate(currency string) (float64, error) {
 		return baseRate.Rate, nil
 	}
 	return d.getRate(currency)
+}
+
+// AddDate is adding a date struct to the exchange rate struct.
+func (r *ExchangeRates) AddDate(date Date) *ExchangeRates {
+	r.Dates = append(r.Dates, date)
+	return r
+}
+
+// GetDate is returning all exchange rates at a date.
+func (r *ExchangeRates) GetDate(date string) (Date, error) {
+	return r.getDate(date)
 }
 
 // GetRate is returning one exchange rate at for a currency in a exchange rate context.
@@ -70,31 +74,9 @@ func (r *ExchangeRates) GetRate(date string, currency string) (float64, error) {
 	return dateExchangeRates.getRate(currency)
 }
 
-// GetExchangeRates is returning all exchange rates at a date.
-func (r *ExchangeRates) GetExchangeRates(date string) (Date, error) {
-	return r.getDate(date)
-}
-
-// isValidDate is checking if the date is in the right format.
-func isValidDate(date string) error {
-	d := &Date{Date: date}
-	return d.isValidDate()
-}
-
-// isValidDate is checking if the date is in the right format.
-func (d *Date) isValidDate() error {
-	if !regexp.MustCompile(DateFormatRegex).MatchString(d.Date) {
-		return fmt.Errorf("\"%s\" is no valid date in format \"%s\" (using regex \"%s\")",
-			d.Date,
-			DateFormat,
-			DateFormatRegex)
-	}
-	return nil
-}
-
 // getDate is retuning all exchange rates at a date.
 func (r *ExchangeRates) getDate(date string) (Date, error) {
-	if err := isValidDate(date); err != nil {
+	if err := IsValidDate(date); err != nil {
 		return Date{}, err
 	}
 	sort.Slice(r.Dates, func(i, j int) bool { return r.Dates[i].Date < r.Dates[j].Date })

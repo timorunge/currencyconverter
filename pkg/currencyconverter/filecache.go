@@ -10,33 +10,50 @@ import (
 )
 
 // FileCacheEnabled is enabling / disabling the file cache.
-// FileCacheFilenameSuffix is the default suffix for the file cache name.
+// FileCacheFilename is the default name for the file cache file - without file
+// extention.
 // FileCacheTimeout is defining the timeout for the cache file.
 const (
-	FileCacheEnabled        = true
-	FileCacheFilenameSuffix = "latest"
-	FileCacheTimeout        = 60 * time.Minute
+	FileCacheEnabled  = true
+	FileCacheFilename = "currencyconverter"
+	FileCacheTimeout  = 60 * time.Minute
+)
+
+// FileCacheDirectory is defining the path where to store the cache file.
+var (
+	FileCacheDirectory = os.TempDir()
 )
 
 // FileCache is the struct for the file cache.
 type FileCache struct {
-	Enabled        bool
-	Filename       string
-	FilenameSuffix string
-	ExchangeRates  ExchangeRates
-	Timeout        time.Duration
+	Directory     string
+	Enabled       bool
+	ExchangeRates ExchangeRates
+	Filename      string
+	FullFilePath  string
+	Timeout       time.Duration
 }
 
 // NewFileCache returning a new file cache struct.
-func NewFileCache(cache FileCache) *FileCache {
+func NewFileCache() *FileCache {
 	c := &FileCache{
-		Enabled:        cache.Enabled,
-		FilenameSuffix: cache.FilenameSuffix,
-		ExchangeRates:  cache.ExchangeRates,
-		Timeout:        cache.Timeout,
+		Directory: FileCacheDirectory,
+		Enabled:   FileCacheEnabled,
+		Filename:  FileCacheFilename,
+		Timeout:   FileCacheTimeout,
 	}
-	c.setFilename()
-	return c
+	return c.setFullFilePath()
+}
+
+// IsValidDirectory is checking if the path is valid.
+func IsValidDirectory(directory string) error {
+	c := &FileCache{Directory: directory}
+	return c.isValidDirectory()
+}
+
+// IsValidDirectory is checking if the path is valid.
+func (c *FileCache) IsValidDirectory() error {
+	return c.isValidDirectory()
 }
 
 // Get is returning the exchange rates from the file cache.
@@ -52,30 +69,52 @@ func (c *FileCache) Write(exchangeRates ExchangeRates) error {
 	return c.writeToFileCache(exchangeRates)
 }
 
-// SetEnabled is enabling or disabling the file cache.
-func (c *FileCache) SetEnabled(enabled bool) {
-	c.Enabled = enabled
+// SetDirectory is setting the directory to store the file cache.
+func (c *FileCache) SetDirectory(directory string) *FileCache {
+	c.Directory = directory
+	return c.setFullFilePath()
 }
 
-// SetFilenameSuffix is setting the suffix for the cache file name.
-func (c *FileCache) SetFilenameSuffix(suffix string) {
-	c.setFilenameSuffix(suffix)
+// SetEnabled is enabling or disabling the file cache.
+func (c *FileCache) SetEnabled(enabled bool) *FileCache {
+	c.Enabled = enabled
+	return c
+}
+
+// SetFilename is setting the name of the file cache file. File extension will
+// automatically be added.
+func (c *FileCache) SetFilename(filename string) *FileCache {
+	c.Filename = filename
+	return c.setFullFilePath()
 }
 
 // SetTimeout is setting the the file cache timeout.
-func (c *FileCache) SetTimeout(timeout time.Duration) {
+func (c *FileCache) SetTimeout(timeout time.Duration) *FileCache {
 	c.Timeout = timeout
+	return c
+}
+
+// isValidDirectory is checking if the path is valid.
+func (c *FileCache) isValidDirectory() error {
+	directory, err := os.Stat(c.Directory)
+	if err != nil {
+		return fmt.Errorf("Can not find directory \"%s\"", c.Directory)
+	}
+	if !directory.IsDir() {
+		return fmt.Errorf("\"%s\" is an existing file, not a directory", c.Directory)
+	}
+	return nil
 }
 
 // getExchangeRates is getting the exchange rates from the cache.
 func (c *FileCache) getExchangeRates() (ExchangeRates, error) {
-	c.setFilename()
-	cacheFile, err := os.Stat(c.Filename)
+	c.setFullFilePath()
+	file, err := os.Stat(c.FullFilePath)
 	if err != nil {
 		return c.ExchangeRates, err
 	}
-	if time.Duration(c.Timeout) > time.Now().Sub(cacheFile.ModTime()) {
-		fileContent, err := ioutil.ReadFile(c.Filename)
+	if time.Duration(c.Timeout) > time.Now().Sub(file.ModTime()) {
+		fileContent, err := ioutil.ReadFile(c.FullFilePath)
 		if err != nil {
 			return c.ExchangeRates, err
 		}
@@ -92,8 +131,8 @@ func (c *FileCache) getExchangeRates() (ExchangeRates, error) {
 
 // writeToFileCache is writing exchange rates to the file cache.
 func (c *FileCache) writeToFileCache(exchangeRates ExchangeRates) error {
-	c.setFilename()
-	file, err := os.Create(c.Filename)
+	c.setFullFilePath()
+	file, err := os.Create(c.FullFilePath)
 	defer file.Close()
 	if err != nil {
 		return err
@@ -108,16 +147,8 @@ func (c *FileCache) writeToFileCache(exchangeRates ExchangeRates) error {
 	return nil
 }
 
-// setFilename is setting the cache file filename.
-func (c *FileCache) setFilename() {
-	if c.FilenameSuffix == "" {
-		c.FilenameSuffix = FileCacheFilenameSuffix
-	}
-	c.Filename = fmt.Sprintf("%s/currencyconverter-%s.json", os.TempDir(), c.FilenameSuffix)
-}
-
-// setFilenameSuffix is setting the suffix for the cache file filename.
-func (c *FileCache) setFilenameSuffix(suffix string) {
-	c.FilenameSuffix = suffix
-	c.setFilename()
+// setFullFilePath is setting the complete path for the cache file.
+func (c *FileCache) setFullFilePath() *FileCache {
+	c.FullFilePath = fmt.Sprintf("%s/%s.json", c.Directory, c.Filename)
+	return c
 }

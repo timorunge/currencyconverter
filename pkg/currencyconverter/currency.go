@@ -61,8 +61,9 @@ func (c *Currencies) IsSupportedCurrency(currency string) error {
 }
 
 // SetSupportedCurrencies is setting the supported currencies.
-func (c *Currencies) SetSupportedCurrencies(currencies []string) {
+func (c *Currencies) SetSupportedCurrencies(currencies []string) *Currencies {
 	c.SupportedCurrencies = currencies
+	return c
 }
 
 // isSupportedCurrency is checking if the given currency is supported.

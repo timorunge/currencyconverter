@@ -95,7 +95,7 @@ func gitBranch() string {
 // gitCommit is getting the used git commit.
 func gitCommit() string {
 	buf := &bytes.Buffer{}
-	_, err := sh.Exec(nil, buf, nil, "git", "show", "--format='%H'", "HEAD", "-q")
+	_, err := sh.Exec(nil, buf, nil, "git", "show", "--format=%H", "HEAD", "-q")
 	if err != nil {
 		return "Unknown"
 	}

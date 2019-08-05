@@ -26,8 +26,9 @@ var (
 		Reverse        bool    `short:"r" long:"reverse" description:"Swap from and to values"`
 	}
 	cliCacheOptions struct {
-		CacheTimeout int  `long:"cache-timeout" description:"Timeout in minutes to invalidate the cache" default:"60"`
-		NoCache      bool `long:"no-cache" description:"Disable caching"`
+		CacheDirectory string `long:"cache-directory" description:"Directory to store cached responses (default: Operating system temp directory)"`
+		CacheTimeout   int    `long:"cache-timeout" description:"Timeout in minutes to invalidate the cache" default:"60"`
+		NoCache        bool   `long:"no-cache" description:"Disable caching"`
 	}
 	cliHelpOptions struct {
 		SupportedCurrencies func() `long:"supported-currencies" description:"Show a list with all supported currencies"`
@@ -76,20 +77,24 @@ func main() {
 		log.Fatal(err)
 	}
 
-	api := currencyconverter.API{}
-	api.SetEndpoint(currencyconverter.APIEndpoint)
-	api.SetTimeout(currencyconverter.APITimeout)
-
-	fileCache := currencyconverter.FileCache{}
+	fileCache := currencyconverter.NewFileCache()
+	if cliCacheOptions.CacheDirectory != "" {
+		fileCache.SetDirectory(cliCacheOptions.CacheDirectory)
+		if err := fileCache.IsValidDirectory(); err != nil {
+			log.Fatal(err)
+		}
+	}
 	fileCache.SetEnabled(!cliCacheOptions.NoCache)
-	fileCache.SetFilenameSuffix(currencyconverter.FileCacheFilenameSuffix)
 	fileCache.SetTimeout(time.Duration(cliCacheOptions.CacheTimeout) * time.Minute)
+	fileCache.SetFilename(fmt.Sprintf("%s-%s", currencyconverter.FileCacheFilename, "latest"))
+
+	api := currencyconverter.NewAPI()
 
 	exchangeRates, err := func() (currencyconverter.ExchangeRates, error) {
 		if cliConvertOptions.Date != "latest" {
 			api.SetHistoricalData(true)
-			fileCache.SetFilenameSuffix("history")
-			fileCache.SetTimeout(24 * time.Hour)
+			fileCache.SetFilename(fmt.Sprintf("%s-%s", currencyconverter.FileCacheFilename, cliConvertOptions.Date))
+			fileCache.SetTimeout(365 * 24 * time.Hour)
 		}
 		exchangeRates, err := fileCache.Get()
 		if err != nil {
@@ -97,10 +102,16 @@ func main() {
 			if err != nil {
 				return exchangeRates, err
 			}
-			if err := fileCache.Write(exchangeRates); err != nil {
+			dailyRates, err := exchangeRates.GetDate(cliConvertOptions.Date)
+			if err != nil {
+				return exchangeRates, err
+			}
+			finalRates := *currencyconverter.NewExchangeRates()
+			finalRates.AddDate(dailyRates)
+			if err := fileCache.Write(finalRates); err != nil {
 				log.Print(err)
 			}
-			return exchangeRates, err
+			return finalRates, err
 		}
 		return exchangeRates, err
 	}()
@@ -108,10 +119,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	converter := currencyconverter.Converter{}
+	currencies := currencyconverter.Currencies{}
+	currencies.SetSupportedCurrencies(currencyconverter.SupportedCurrencies)
+
+	converter := currencyconverter.NewConverter()
 	converter.SetAmount(cliConvertOptions.Amount)
 	converter.SetBaseCurrency(baseCurrency)
-	converter.SetCurrencies(currencyconverter.Currencies{SupportedCurrencies: currencyconverter.SupportedCurrencies})
+	converter.SetCurrencies(currencies)
 	converter.SetDate(cliConvertOptions.Date)
 	converter.SetExchangeRates(exchangeRates)
 	converter.SetTargetCurrency(targetCurrency)

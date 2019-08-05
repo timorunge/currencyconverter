@@ -12,10 +12,12 @@ import (
 // APIEndpoint is the endpoint for the API.
 //   More details can be found at
 //   https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html
+// APIHistoricalData is enabling the historical data part.
 // APITimeout is the timeout for the API call.
 const (
-	APIEndpoint = "https://www.ecb.europa.eu"
-	APITimeout  = 5 * time.Second
+	APIEndpoint       = "https://www.ecb.europa.eu"
+	APIHistoricalData = false
+	APITimeout        = 5 * time.Second
 )
 
 // API is the struct for the API.
@@ -26,13 +28,12 @@ type API struct {
 	Timeout        time.Duration
 }
 
-// NewAPI returning a new API struct.
-func NewAPI(api API) *API {
+// NewAPI is returning a new API struct.
+func NewAPI() *API {
 	return &API{
-		Endpoint:       api.Endpoint,
-		ExchangeRates:  api.ExchangeRates,
-		HistoricalData: api.HistoricalData,
-		Timeout:        api.Timeout,
+		Endpoint:       APIEndpoint,
+		HistoricalData: APIHistoricalData,
+		Timeout:        APITimeout,
 	}
 }
 
@@ -46,18 +47,21 @@ func (a *API) Get() (ExchangeRates, error) {
 }
 
 // SetEndpoint is setting the endpoint for the API.
-func (a *API) SetEndpoint(endpoint string) {
+func (a *API) SetEndpoint(endpoint string) *API {
 	a.Endpoint = endpoint
+	return a
 }
 
 // SetHistoricalData is the historical data flag.
-func (a *API) SetHistoricalData(historicalData bool) {
+func (a *API) SetHistoricalData(historicalData bool) *API {
 	a.HistoricalData = historicalData
+	return a
 }
 
 // SetTimeout is setting the HTTP timeout for the API call.
-func (a *API) SetTimeout(timeout time.Duration) {
+func (a *API) SetTimeout(timeout time.Duration) *API {
 	a.Timeout = timeout
+	return a
 }
 
 // getExchangeRates is getting the exchange rates from the API.

@@ -45,6 +45,7 @@ Convert options:
   -r, --reverse               Swap from and to values
 
 Cache options:
+      --cache-directory=      Directory to store cached responses (default: Operating system default temp directory)
       --cache-timeout=        Timeout in minutes to invalidate the cache (default: 60)
       --no-cache              Disable caching
 
