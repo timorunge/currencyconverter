@@ -11,7 +11,7 @@ import (
 
 // FileCacheEnabled is enabling / disabling the file cache.
 // FileCacheFilename is the default name for the file cache file - without file
-// extention.
+// extension.
 // FileCacheTimeout is defining the timeout for the cache file.
 const (
 	FileCacheEnabled  = true

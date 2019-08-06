@@ -12,7 +12,7 @@ exchange rate using foreign exchange reference rates published by the
 You can use an
 [official release](https://github.com/timorunge/currencyconverter/releases) of
 `currencyconverter`. The tarballs for each release contain the
-`currencyconverter` CLI applicaton.
+`currencyconverter` CLI application.
 
 Copy the binary in your `$PATH` or call it directly via
 `$YOURDIR/currencyconverter`.
