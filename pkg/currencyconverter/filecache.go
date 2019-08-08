@@ -19,8 +19,20 @@ const (
 	FileCacheTimeout  = 60 * time.Minute
 )
 
-// FileCacheDirectory is defining the path where to store the cache file.
+// ErrFileCacheDisabled is the error message when caching is disabled.
+// ErrFileCacheNoRate is the error when the file cache is empty.
+// ErrFileCacheOutdated is the error when the file cache is too old.
+// ErrStrDirectoryIsFile is the error message string if a supposted directory is a
+// ErrStrNoDirectory is the error message string if a directory is not existing.
+// FileStrCacheDirectory is defining the path where to store the cache file.
+// file.
 var (
+	ErrFileCacheDisabled  = errors.New("Caching is disabled")
+	ErrFileCacheNoRate    = errors.New("The file cache is not providing a single exchange rate")
+	ErrFileCacheOutdated  = errors.New("The file cache is outdated")
+	ErrStrDirectoryIsFile = "\"%s\" is an existing file, not a directory"
+	ErrStrNoDirectory     = "Can not find directory \"%s\""
+
 	FileCacheDirectory = os.TempDir()
 )
 
@@ -61,7 +73,7 @@ func (c *FileCache) Get() (ExchangeRates, error) {
 	if c.Enabled {
 		return c.getExchangeRates()
 	}
-	return c.ExchangeRates, errors.New("Caching is disabled")
+	return c.ExchangeRates, ErrFileCacheDisabled
 }
 
 // Write is writing exchange rates to the file cache.
@@ -98,10 +110,10 @@ func (c *FileCache) SetTimeout(timeout time.Duration) *FileCache {
 func (c *FileCache) isValidDirectory() error {
 	directory, err := os.Stat(c.Directory)
 	if err != nil {
-		return fmt.Errorf("Can not find directory \"%s\"", c.Directory)
+		return fmt.Errorf(ErrStrNoDirectory, c.Directory)
 	}
 	if !directory.IsDir() {
-		return fmt.Errorf("\"%s\" is an existing file, not a directory", c.Directory)
+		return fmt.Errorf(ErrStrDirectoryIsFile, c.Directory)
 	}
 	return nil
 }
@@ -111,22 +123,22 @@ func (c *FileCache) getExchangeRates() (ExchangeRates, error) {
 	c.setFullFilePath()
 	file, err := os.Stat(c.FullFilePath)
 	if err != nil {
-		return c.ExchangeRates, err
+		return NullExchangeRates, err
 	}
 	if time.Duration(c.Timeout) > time.Now().Sub(file.ModTime()) {
 		fileContent, err := ioutil.ReadFile(c.FullFilePath)
 		if err != nil {
-			return c.ExchangeRates, err
+			return NullExchangeRates, err
 		}
 		if err := json.Unmarshal(fileContent, &c.ExchangeRates); err != nil {
-			return c.ExchangeRates, err
+			return NullExchangeRates, err
 		}
 		if len(c.ExchangeRates.Dates) == 0 {
-			return c.ExchangeRates, errors.New("Not getting a single exchange rate from the file cache")
+			return NullExchangeRates, ErrFileCacheNoRate
 		}
 		return c.ExchangeRates, nil
 	}
-	return c.ExchangeRates, errors.New("File cache is outdated")
+	return NullExchangeRates, ErrFileCacheOutdated
 }
 
 // writeToFileCache is writing exchange rates to the file cache.

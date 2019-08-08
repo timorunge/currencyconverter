@@ -23,6 +23,16 @@ func TestRatesDate(t *testing.T) {
 	if f64 != testRate.Rate {
 		t.Error("Expected result is", testRate.Rate, "but got", f64)
 	}
+
+	r := d.ToNewExchangeRates()
+	f64, err = r.Dates[0].GetRate(testRate.Currency)
+	if err != nil {
+		t.Error("Expected result is a float64 value", err)
+	}
+
+	if f64 != testRate.Rate {
+		t.Error("Expected result is", testRate.Rate, "but got", f64)
+	}
 }
 
 func TestRatesExchangeRatesJSON(t *testing.T) {

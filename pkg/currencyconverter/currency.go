@@ -5,9 +5,12 @@ import (
 	"sort"
 )
 
+// ErrStrNotSupportedCurrency is the string which should be used if a currency is
+// not supported.
 // SupportedCurrencies are the currencies which are supported.
 var (
-	SupportedCurrencies = []string{
+	ErrStrNotSupportedCurrency = "\"%s\" is not a supported currency"
+	SupportedCurrencies        = []string{
 		"AUD",
 		"BGN",
 		"BRL",
@@ -73,5 +76,5 @@ func (c *Currencies) isSupportedCurrency(currency string) error {
 	if i < len(c.SupportedCurrencies) && c.SupportedCurrencies[i] == currency {
 		return nil
 	}
-	return fmt.Errorf("\"%s\" is not a supported currency", currency)
+	return fmt.Errorf(ErrStrNotSupportedCurrency, currency)
 }

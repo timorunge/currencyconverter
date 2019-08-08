@@ -13,10 +13,7 @@ import (
 )
 
 var (
-	buildDate = "Unknown"
-	gitCommit = "Unknown"
-	parser    = flags.NewParser(nil, flags.PrintErrors|flags.PassDoubleDash)
-	version   = "Unknown"
+	parser = flags.NewParser(nil, flags.PrintErrors|flags.PassDoubleDash)
 
 	cliConvertOptions struct {
 		Amount         float64 `short:"a" long:"amount" description:"Amount to calculate" default:"1" required:"true"`
@@ -53,8 +50,7 @@ func init() {
 }
 
 func main() {
-	_, err := parser.Parse()
-	if err != nil {
+	if _, err := parser.Parse(); err != nil {
 		os.Exit(1)
 	}
 
@@ -65,8 +61,7 @@ func main() {
 		cliConvertOptions.TargetCurrency = cliConvertOptions.BaseCurrency
 	}
 
-	err = validateOptions()
-	if err != nil {
+	if err := validateOptions(); err != nil {
 		log.Fatal(err)
 	}
 
@@ -75,7 +70,7 @@ func main() {
 		fileCache.SetDirectory(cliCacheOptions.CacheDirectory)
 	}
 	fileCache.SetEnabled(!cliCacheOptions.NoCache)
-	fileCache.SetFilename(fmt.Sprintf("%s-%s", currencyconverter.FileCacheFilename, "latest"))
+	fileCache.SetFilename(fmt.Sprintf("%s-%s", currencyconverter.FileCacheFilename, currencyconverter.DateLatest))
 	fileCache.SetTimeout(time.Duration(cliCacheOptions.CacheTimeout) * time.Minute)
 
 	api := currencyconverter.NewAPI()
@@ -100,30 +95,29 @@ func main() {
 }
 
 // getRates is getting the exchange rates.
-func getRates(api *currencyconverter.API, fileCache *currencyconverter.FileCache) (currencyconverter.ExchangeRates, error) {
-	if cliConvertOptions.Date != "latest" {
+func getRates(api *currencyconverter.API, fileCache *currencyconverter.FileCache) (rates currencyconverter.ExchangeRates, err error) {
+	if cliConvertOptions.Date != currencyconverter.DateLatest {
 		api.SetHistoricalData(true)
 		fileCache.SetFilename(fmt.Sprintf("%s-%s", currencyconverter.FileCacheFilename, cliConvertOptions.Date))
 		fileCache.SetTimeout(365 * 24 * time.Hour)
 	}
-	rates, err := fileCache.Get()
+	cachedRates, err := fileCache.Get()
 	if err != nil {
-		rates, err := api.Get()
+		apiRates, err := api.Get()
 		if err != nil {
 			return rates, err
 		}
-		dailyRates, err := rates.GetDate(cliConvertOptions.Date)
+		dailyRates, err := apiRates.GetDate(cliConvertOptions.Date)
 		if err != nil {
 			return rates, err
 		}
-		finalRates := *currencyconverter.NewExchangeRates()
-		finalRates.AddDate(dailyRates)
+		finalRates := dailyRates.ToNewExchangeRates()
 		if err := fileCache.Write(finalRates); err != nil {
 			log.Print(err)
 		}
-		return finalRates, err
+		return finalRates, nil
 	}
-	return rates, err
+	return cachedRates, nil
 }
 
 // printHelp is printing the help on stdout.
@@ -161,6 +155,12 @@ func printSupportedCurrencies() {
 		strings.Join(currencyconverter.SupportedCurrencies, "\n  - ")))
 	os.Exit(0)
 }
+
+var (
+	buildDate = "Unknown"
+	gitCommit = "Unknown"
+	version   = "Unknown"
+)
 
 // printVersion is printing the version information on stdout.
 func printVersion() {

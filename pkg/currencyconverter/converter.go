@@ -10,9 +10,24 @@ import (
 
 // DateFormat is the format of the date.
 // DateFormatRegex is the regex for the date format.
+// DateLatest is giving just the latest day.
 const (
 	DateFormat      = "latest|YYYY-MM-DD"
 	DateFormatRegex = "^latest|(1999|20[0-9]{2})-(0?[1-9]|1[012])-(0?[1-9]|[12][0-9]|3[01])$"
+	DateLatest      = "latest"
+)
+
+// ErrAmountIsZero is the error message if the amount is 0.
+// ErrNoF64 is the error message if the amount is no float64 value.
+// ErrStrDateInFuture is the error message string if the date is in the future.
+// ErrStrDateIsWeekend is the error message string if the date is on a weekend.
+// ErrStrNoValidDateFormat is the error message string if the format is wrong.
+var (
+	ErrAmountIsZero         = errors.New("Amount should be bigger than zero")
+	ErrNoF64                = errors.New("Amount is no float64 value")
+	ErrStrDateInFuture      = "\"%s\" is in the future"
+	ErrStrDateIsWeekend     = "\"%s\" is a %s, date needs to be a weekday between %s and %s"
+	ErrStrNoValidDateFormat = "\"%s\" is no valid date in format \"%s\" (using regex \"%s\")"
 )
 
 // Converter is the struct for the converter.
@@ -31,10 +46,10 @@ func NewConverter() *Converter {
 }
 
 // Convert is returning the converted amount in the target currency.
-func (c *Converter) Convert() (float64, error) {
+func (c *Converter) Convert() (f64 float64, err error) {
 	exchangeRate, err := c.calculateExchangeRate()
 	if err != nil {
-		return float64(0), err
+		return
 	}
 	return c.Amount * exchangeRate, nil
 }
@@ -104,25 +119,24 @@ func (c *Converter) SetTargetCurrency(targetCurrency string) *Converter {
 
 // calculateExchangeRate is doing the !(ultra complex) mathematical converting
 // operation of calculating the exchange rate.
-func (c *Converter) calculateExchangeRate() (float64, error) {
-	f64 := float64(0)
-	if err := c.isValidAmount(); err != nil {
-		return f64, err
+func (c *Converter) calculateExchangeRate() (f64 float64, err error) {
+	if err = c.isValidAmount(); err != nil {
+		return
 	}
-	if err := c.Currencies.isSupportedCurrency(c.BaseCurrency); err != nil {
-		return f64, err
+	if err = c.Currencies.isSupportedCurrency(c.BaseCurrency); err != nil {
+		return
 	}
-	if err := c.Currencies.isSupportedCurrency(c.TargetCurrency); err != nil {
-		return f64, err
+	if err = c.Currencies.isSupportedCurrency(c.TargetCurrency); err != nil {
+		return
 	}
 
 	baseCurrencyRate, err := c.ExchangeRates.GetRate(c.Date, c.BaseCurrency)
 	if err != nil {
-		return f64, err
+		return
 	}
 	targetCurrencyRate, err := c.ExchangeRates.GetRate(c.Date, c.TargetCurrency)
 	if err != nil {
-		return f64, err
+		return
 	}
 
 	return baseCurrencyRate / targetCurrencyRate, nil
@@ -132,41 +146,28 @@ func (c *Converter) calculateExchangeRate() (float64, error) {
 func (c *Converter) isValidAmount() error {
 	if v := reflect.ValueOf(c.Amount).Kind(); v == reflect.Float64 {
 		if c.Amount == float64(0) {
-			return errors.New("Amount should be bigger than zero")
+			return ErrAmountIsZero
 		}
 		return nil
 	}
-	return errors.New("Amount is no float64 value")
-}
-
-// isValidDate is checking if the date is in the right format.
-func isValidDate(date string) error {
-	c := &Converter{Date: date}
-	return c.isValidDate()
+	return ErrNoF64
 }
 
 // isValidDate is checking if the date is in the right format and not on a weekend.
 func (c *Converter) isValidDate() error {
 	if !regexp.MustCompile(DateFormatRegex).MatchString(c.Date) {
-		return fmt.Errorf("\"%s\" is no valid date in format \"%s\" (using regex \"%s\")",
-			c.Date,
-			DateFormat,
-			DateFormatRegex)
+		return fmt.Errorf(ErrStrNoValidDateFormat, c.Date, DateFormat, DateFormatRegex)
 	}
-	if c.Date != "latest" {
+	if c.Date != DateLatest {
 		parsedTime, err := time.Parse(time.RFC3339, fmt.Sprintf("%sT00:00:00.000Z", c.Date))
 		if err != nil {
 			return err
 		}
 		if parsedTime.After(time.Now()) {
-			return fmt.Errorf("\"%s\" is in the future", c.Date)
+			return fmt.Errorf(ErrStrDateInFuture, c.Date)
 		}
 		if parsedTime.Weekday() == time.Saturday || parsedTime.Weekday() == time.Sunday {
-			return fmt.Errorf("\"%s\" is a %s, date needs to be between %s and %s",
-				c.Date,
-				parsedTime.Weekday().String(),
-				time.Monday.String(),
-				time.Friday.String())
+			return fmt.Errorf(ErrStrDateIsWeekend, c.Date, parsedTime.Weekday().String(), time.Monday.String(), time.Friday.String())
 		}
 	}
 	return nil

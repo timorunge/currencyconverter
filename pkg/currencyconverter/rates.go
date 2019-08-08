@@ -1,14 +1,27 @@
 package currencyconverter
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"sort"
 )
 
+// ErrStrNoRateForCurrency is the error message string if a rate for a currency
+// can't be found.
+// ErrStrNoRateForDate is the error message string if no exchange rates can be
+// found for a date.
+// NullDate is an empty date struct.
+// NullExchangeRates is an empty exchange rates struct.
+// NullRate is an empty rate struct.
 // baseRate is the base rate for all calculations.
 var (
+	ErrStrNoRateForCurrency = "Can not find rate for currency \"%s\""
+	ErrStrNoRateForDate     = "Can not find exchange rates for date \"%s\""
+
+	NullDate          = Date{}
+	NullExchangeRates = ExchangeRates{}
+	NullRate          = Rate{}
+
 	baseRate = Rate{
 		Currency: "EUR",
 		Rate:     float64(1),
@@ -51,6 +64,13 @@ func (d *Date) GetRate(currency string) (float64, error) {
 	return d.getRate(currency)
 }
 
+// ToNewExchangeRates is creating a new exchange rate object out of a date object.
+func (d *Date) ToNewExchangeRates() ExchangeRates {
+	r := NewExchangeRates()
+	r.AddDate(*d)
+	return *r
+}
+
 // AddDate is adding a date struct to the exchange rate struct.
 func (r *ExchangeRates) AddDate(date Date) *ExchangeRates {
 	r.Dates = append(r.Dates, date)
@@ -63,13 +83,13 @@ func (r *ExchangeRates) GetDate(date string) (Date, error) {
 }
 
 // GetRate is returning one exchange rate at for a currency in a exchange rate context.
-func (r *ExchangeRates) GetRate(date string, currency string) (float64, error) {
+func (r *ExchangeRates) GetRate(date string, currency string) (f64 float64, err error) {
 	if currency == baseRate.Currency {
 		return baseRate.Rate, nil
 	}
 	dateExchangeRates, err := r.getDate(date)
 	if err != nil {
-		return float64(0), err
+		return
 	}
 	return dateExchangeRates.getRate(currency)
 }
@@ -80,29 +100,28 @@ func (r *ExchangeRates) getDate(date string) (Date, error) {
 		return Date{}, err
 	}
 	sort.Slice(r.Dates, func(i, j int) bool { return r.Dates[i].Date < r.Dates[j].Date })
-	if date == "latest" {
+	if date == DateLatest {
 		return r.Dates[len(r.Dates)-1], nil
 	}
 	i := sort.Search(len(r.Dates), func(i int) bool { return r.Dates[i].Date >= date })
 	if i < len(r.Dates) && r.Dates[i].Date == date {
 		return r.Dates[i], nil
 	}
-	return Date{}, fmt.Errorf("Can not find exchange rates for date \"%s\"", date)
+	return NullDate, fmt.Errorf(ErrStrNoRateForDate, date)
 }
 
 // getRate is returning one exchange rate at a given date.
-func (d *Date) getRate(currency string) (float64, error) {
+func (d *Date) getRate(currency string) (f64 float64, err error) {
 	if currency == baseRate.Currency {
 		return baseRate.Rate, nil
 	}
-	f64 := float64(0)
 	sort.Slice(d.Rates, func(i, j int) bool { return d.Rates[i].Currency < d.Rates[j].Currency })
 	i := sort.Search(len(d.Rates), func(i int) bool { return d.Rates[i].Currency >= currency })
 	if i < len(d.Rates) && d.Rates[i].Currency == currency {
 		if v := reflect.ValueOf(d.Rates[i].Rate).Kind(); v == reflect.Float64 {
 			return baseRate.Rate / d.Rates[i].Rate, nil
 		}
-		return f64, errors.New("Rate is no float64 value")
+		return f64, ErrNoF64
 	}
-	return f64, fmt.Errorf("Can not find rate for \"%s\"", currency)
+	return f64, fmt.Errorf(ErrStrNoRateForCurrency, currency)
 }

@@ -20,6 +20,14 @@ const (
 	APITimeout        = 5 * time.Second
 )
 
+// ErrAPINoRate is the error when there is a successful response from the API
+// but it's empty...
+// ErrAPIStatus is the error when the API resonse is != 2xx
+var (
+	ErrAPINoRate = errors.New("The API is not providing a single exchange rate")
+	ErrAPIStatus = errors.New("Can not get communicate with the exchange rate API")
+)
+
 // API is the struct for the API.
 type API struct {
 	Endpoint       string
@@ -69,21 +77,21 @@ func (a *API) getExchangeRates(url string) (ExchangeRates, error) {
 	httpClient := &http.Client{Timeout: a.Timeout}
 	resp, err := httpClient.Get(url)
 	if err != nil {
-		return a.ExchangeRates, err
+		return NullExchangeRates, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
 		bytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return a.ExchangeRates, err
+			return NullExchangeRates, err
 		}
 		if err := xml.Unmarshal(bytes, &a.ExchangeRates); err != nil {
-			return a.ExchangeRates, err
+			return NullExchangeRates, err
 		}
 		if len(a.ExchangeRates.Dates) == 0 {
-			return a.ExchangeRates, errors.New("Not getting a single exchange rate from the API")
+			return NullExchangeRates, ErrAPINoRate
 		}
 		return a.ExchangeRates, nil
 	}
-	return a.ExchangeRates, errors.New("Not getting exchange rates from the API")
+	return NullExchangeRates, ErrAPIStatus
 }
