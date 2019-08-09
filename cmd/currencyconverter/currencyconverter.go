@@ -57,8 +57,7 @@ func main() {
 	cliConvertOptions.BaseCurrency = strings.ToUpper(cliConvertOptions.BaseCurrency)
 	cliConvertOptions.TargetCurrency = strings.ToUpper(cliConvertOptions.TargetCurrency)
 	if cliConvertOptions.Reverse {
-		cliConvertOptions.BaseCurrency = cliConvertOptions.TargetCurrency
-		cliConvertOptions.TargetCurrency = cliConvertOptions.BaseCurrency
+		cliConvertOptions.BaseCurrency, cliConvertOptions.TargetCurrency = cliConvertOptions.TargetCurrency, cliConvertOptions.BaseCurrency
 	}
 
 	if err := validateOptions(); err != nil {

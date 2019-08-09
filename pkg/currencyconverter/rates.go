@@ -97,7 +97,7 @@ func (r *ExchangeRates) GetRate(date string, currency string) (f64 float64, err 
 // getDate is retuning all exchange rates at a date.
 func (r *ExchangeRates) getDate(date string) (Date, error) {
 	if err := IsValidDate(date); err != nil {
-		return Date{}, err
+		return NullDate, err
 	}
 	sort.Slice(r.Dates, func(i, j int) bool { return r.Dates[i].Date < r.Dates[j].Date })
 	if date == DateLatest {
