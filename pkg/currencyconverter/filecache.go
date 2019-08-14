@@ -73,7 +73,7 @@ func (c *FileCache) Get() (ExchangeRates, error) {
 	if c.Enabled {
 		return c.getExchangeRates()
 	}
-	return c.ExchangeRates, ErrFileCacheDisabled
+	return NullExchangeRates, ErrFileCacheDisabled
 }
 
 // Write is writing exchange rates to the file cache.
