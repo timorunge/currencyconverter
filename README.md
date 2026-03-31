@@ -105,11 +105,11 @@ change. Disable caching with `--no-cache`.
 ## Development
 
 ```bash
-make build    # Build the binary
-make test     # Run tests with race detector
+make help     # Show all available targets
+make check    # Run all quality gates (fmt, tidy, vet, lint, test)
 make lint     # Run golangci-lint
-make check    # All quality gates: fmt + tidy + vet + lint + test
-make help     # See all available targets
+make test     # Run tests with race detector
+make build    # Build static binary
 ```
 
 ## License

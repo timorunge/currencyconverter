@@ -1,5 +1,2 @@
-dist/
-currencyconverter
-*.out
-*.prof
-.DS_Store
+/currencyconverter
+/dist/
