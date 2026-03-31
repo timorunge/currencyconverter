@@ -1,64 +1,117 @@
 # currencyconverter
 
-[![Go Report](https://goreportcard.com/badge/github.com/timorunge/currencyconverter)](https://goreportcard.com/report/github.com/timorunge/currencyconverter)
-[![Build Status](https://travis-ci.org/timorunge/currencyconverter.svg?branch=master)](https://travis-ci.org/timorunge/currencyconverter)
+[![CI](https://github.com/timorunge/currencyconverter/actions/workflows/ci.yml/badge.svg)](https://github.com/timorunge/currencyconverter/actions/workflows/ci.yml)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/timorunge/currencyconverter)](https://go.dev/)
+[![Go Report Card](https://goreportcard.com/badge/github.com/timorunge/currencyconverter)](https://goreportcard.com/report/github.com/timorunge/currencyconverter)
+[![License](https://img.shields.io/github/license/timorunge/currencyconverter)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/timorunge/currencyconverter)](https://github.com/timorunge/currencyconverter/releases)
 
-`currencyconverter` is a simple CLI tool written in Go for calculating the
-exchange rate using foreign exchange reference rates published by the
-[European Central Bank](https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html).
+A simple CLI tool written in Go for calculating exchange rates using
+foreign exchange reference rates published by the
+[European Central Bank](https://www.ecb.europa.eu/stats/eurofxref/).
 
-## Install
+## Installation
 
-You can use an
-[official release](https://github.com/timorunge/currencyconverter/releases) of
-`currencyconverter`. The tarballs for each release contain the
-`currencyconverter` CLI application.
+### Go install
 
-Copy the binary in your `$PATH` or call it directly via
-`$YOURDIR/currencyconverter`.
-
-To get the latest version of `currencyconverter` just run `go get`.
-
-```sh
-go get github.com/timorunge/currencyconverter/cmd/currencyconverter
+```bash
+go install github.com/timorunge/currencyconverter/cmd/currencyconverter@latest
 ```
 
-If `$GOPATH/bin` is not in your `$PATH` call `currencyconverter` directly via
-`$GOPATH/bin/currencyconverter`.
+### Binary download
 
-Last but not least you also have the possibility to to clone this repository
-and use [Mage](https://magefile.org/) to `test`, `build` and `install`
-`currencyconverter`.
+Download pre-built binaries for your platform from the
+[releases page](https://github.com/timorunge/currencyconverter/releases).
+
+### Build from source
+
+```bash
+git clone https://github.com/timorunge/currencyconverter.git
+cd currencyconverter
+make build
+```
+
+## Quick Start
+
+Convert 100 EUR to USD:
+
+```bash
+currencyconverter --amount 100 --from EUR --to USD
+```
+
+```
+100 EUR ≈ 111.51 USD (2019-07-31, ECB)
+```
+
+Convert for a specific date:
+
+```bash
+currencyconverter --amount 500 --from USD --to GBP --date 2019-07-31
+```
+
+Swap currencies with `--reverse`:
+
+```bash
+currencyconverter --from EUR --to USD --reverse
+```
+
+Get JSON output:
+
+```bash
+currencyconverter --amount 100 --from EUR --to USD --json
+```
+
+```json
+{"amount":100,"from":"EUR","to":"USD","result":111.51,"date":"2019-07-31","source":"ECB"}
+```
 
 ## Usage
 
-```sh
+```
+currencyconverter - Exchange rate calculator using ECB reference rates
+
 Usage:
   currencyconverter [OPTIONS]
 
-currencyconverter is calculating the exchange rate using foreign exchange reference rates published by the European Central Bank
+Options:
+  -f, --from string            Currency to use as base (default "EUR")
+  -t, --to string              Currency to convert to (default "USD")
+  -a, --amount float           Amount to calculate (default 1)
+  -d, --date string            Date for the calculation (latest|YYYY-MM-DD) (default "latest")
+  -r, --reverse                Swap from and to values
+      --json                   Output result as JSON
+      --no-cache               Disable caching
+  -h, --help                   Show this help message
+      --version                Show the version of currencyconverter
+      --supported-currencies   Show a list with all supported currencies
+```
 
-Convert options:
-  -a, --amount=               Amount to calculate (default: 1)
-  -f, --from=                 Currency to use as base (default: EUR)
-  -t, --to=                   Currency to convert too (default: USD)
-  -r, --reverse               Swap from and to values
+## Supported Currencies
 
-Cache options:
-      --cache-directory=      Directory to store cached responses (default: Operating system default temp directory)
-      --cache-timeout=        Timeout in minutes to invalidate the cache (default: 60)
-      --no-cache              Disable caching
+AUD, BGN, BRL, CAD, CHF, CNY, CZK, DKK, EUR, GBP, HKD, HUF, IDR,
+ILS, INR, ISK, JPY, KRW, MXN, MYR, NOK, NZD, PHP, PLN, RON, SEK,
+SGD, THB, TRY, USD, ZAR
 
-Help options:
-      --supported-currencies  Show a list with all supported currencies
-  -v, --version               Show the version of currencyconverter
-  -h, --help                  Show this help message
- ```
+Run `currencyconverter --supported-currencies` for the full list.
+
+## Caching
+
+Exchange rates are cached locally as JSON files in the OS temp
+directory. Latest rates are cached until the top of the next hour,
+keeping network calls low while staying current with ECB updates.
+Historical dates are cached indefinitely since their rates never
+change. Disable caching with `--no-cache`.
+
+## Development
+
+```bash
+make build    # Build the binary
+make test     # Run tests with race detector
+make lint     # Run golangci-lint
+make check    # All quality gates: fmt + tidy + vet + lint + test
+make help     # See all available targets
+```
 
 ## License
 
 [BSD 3-Clause "New" or "Revised" License](LICENSE)
-
-## Author Information
-
-- Timo Runge

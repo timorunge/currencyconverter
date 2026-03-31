@@ -1,8 +1,5 @@
 module github.com/timorunge/currencyconverter
 
-go 1.12
+go 1.26.1
 
-require (
-	github.com/jessevdk/go-flags v1.4.0
-	github.com/magefile/mage v1.8.0
-)
+require github.com/spf13/pflag v1.0.10
